@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 import { submitCustomRequest, type CustomRequestState } from "@/app/(shop)/custom/actions";
@@ -11,17 +11,9 @@ import type { Category } from "@/lib/types";
 export function CustomRequestForm({ categories }: { categories: Category[] }) {
   const params = useSearchParams();
   const preset = categories.find((c) => c.slug === params.get("category"));
-  const fileRef = useRef<File | null>(null);
   const [fileName, setFileName] = useState("");
-
-  const [state, action, pending] = useActionState<CustomRequestState, FormData>(
-    async (prev, formData) => {
-      formData.delete("attachment");
-      if (fileRef.current) formData.set("attachment", fileRef.current);
-      return submitCustomRequest(prev, formData);
-    },
-    {},
-  );
+  // The server action is passed directly so the form also works without JavaScript.
+  const [state, action, pending] = useActionState<CustomRequestState, FormData>(submitCustomRequest, {});
   const errors = state.fieldErrors ?? {};
   const today = new Date().toISOString().slice(0, 10);
 
@@ -95,9 +87,17 @@ export function CustomRequestForm({ categories }: { categories: Category[] }) {
             accept="image/jpeg,image/png,image/webp"
             className="field-input file:mr-3 file:rounded-full file:border-0 file:bg-petal file:px-3 file:py-1 file:text-sm file:text-ink"
             onChange={async (e) => {
-              const f = e.target.files?.[0];
-              fileRef.current = f ? await resizeImage(f) : null;
+              const input = e.currentTarget;
+              const f = input.files?.[0];
               setFileName(f?.name ?? "");
+              if (!f) return;
+              // Swap in the resized image so large phone photos fit the upload limit.
+              const resized = await resizeImage(f);
+              if (resized !== f) {
+                const dt = new DataTransfer();
+                dt.items.add(resized);
+                input.files = dt.files;
+              }
             }}
           />
         </Field>
