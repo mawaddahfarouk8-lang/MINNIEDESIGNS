@@ -23,11 +23,18 @@ export type StoreSettings = Omit<Tables["store_settings"]["Row"], "shipping_zone
   shipping_zones: ShippingZone[];
 };
 
+export type CardLayout = "portrait" | "background";
+
 export type Personalization = {
   name?: string;
   title?: string;
   phone?: string;
   color?: string;
+  /** Storage path in the private card-photos bucket, set by the server. */
+  photo?: string;
+  layout?: CardLayout;
+  /** Small data-URL thumbnail kept in the browser cart only; never sent to the server. */
+  photoPreview?: string;
 };
 
 export type CartItem = {
@@ -98,4 +105,12 @@ export function paymentTone(status: PaymentStatus) {
   if (status === "rejected") return "danger" as const;
   if (status === "refunded") return "neutral" as const;
   return "amber" as const;
+}
+
+// The cart keeps a small photo thumbnail for display only; drop it before
+// comparing items or sending them to the server.
+export function withoutPreview(p: Personalization): Personalization {
+  const copy = { ...p };
+  delete copy.photoPreview;
+  return copy;
 }

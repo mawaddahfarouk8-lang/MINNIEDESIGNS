@@ -17,6 +17,12 @@ const itemSchema = z.object({
       title: z.string().max(60).optional(),
       phone: z.string().max(60).optional(),
       color: z.string().max(60).optional(),
+      // Only paths in the exact shape uploadCardPhoto generates.
+      photo: z
+        .string()
+        .regex(/^\d{4}-\d{2}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp)$/)
+        .optional(),
+      layout: z.enum(["portrait", "background"]).optional(),
     })
     .strict()
     .optional(),

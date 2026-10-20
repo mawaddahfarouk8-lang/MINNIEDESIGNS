@@ -19,7 +19,10 @@ browser.
 
 1. In Vercel → Storage → your Supabase database → **Open in Supabase**.
 2. Go to **SQL Editor** → **New query**.
-3. Paste the whole file `supabase/migrations/20261020220000_init_schema.sql` and press **Run**.
+3. Run each file in `supabase/migrations/` **in order**, one query at a time. Paste
+   the whole file, then press **Run**:
+   1. `20261020220000_init_schema.sql`
+   2. `20261020224607_card_photos.sql`
 
 This creates the tables and security rules, the storage folders for images, the
 categories, and the three starting products.

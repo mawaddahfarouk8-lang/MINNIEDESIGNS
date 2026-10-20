@@ -7,7 +7,8 @@
 | Someone changes prices in the browser | Prices, option extras and delivery fees are recalculated inside the database (`public.place_order`) from the catalog. The browser only sends product IDs, options and quantities. |
 | Reading other people's orders or data | Row-level security on every table. Customers see only their own orders, profile and requests; visitors see only the active catalog. |
 | Becoming admin | Admin membership lives in `public.admins`, which customers can't write. Every admin page and action checks it on the server, and the database checks it again. |
-| Payment screenshots leaking | Stored in a private bucket. Admins see them through links that expire after 10 minutes. |
+| Payment screenshots or customer photos leaking | Stored in private buckets. Admins see them through links that expire after 10 minutes. |
+| Pointing an order at someone else's file | Orders accept a card photo only as a path in the exact form the server generates (`YYYY-MM/<random uuid>.jpg`), checked in both the app and the database. |
 | Malicious uploads | Only JPG, PNG and WEBP, checked by their file contents (not the name), 4 MB maximum. SVG and HTML are refused. |
 | Password guessing, spam orders, order-number guessing | Rate limits stored in the database, shared across all servers: sign-in (8 per 15 min per IP, 5 per account), sign-up, password reset, orders, order tracking and custom requests. Order tracking needs both the order number and the phone number. |
 | Cross-site scripting | React escapes all text; strict Content-Security-Policy; no HTML from users is ever rendered. |
@@ -17,9 +18,13 @@
 
 ## Penetration test — 21 Oct 2026
 
-Run against a production build with a local copy of the database. All 48 checks passed.
+Run against a production build with a local copy of the database. All 54 checks passed.
 
-**Database and storage, attacked directly with the public key (28 checks)**
+**Database and storage, attacked directly with the public key (34 checks)**
+- Nobody but admins can list or read customer card photos, and nobody can upload
+  into that folder directly.
+- Orders with forged photo paths (`../payment-proofs/...`, other folders) or invalid
+  layouts are rejected by the database.
 - Anonymous visitors could not read orders, order items, history, profiles, admins
   or custom requests, and saw only active products.
 - They could not insert orders directly, change prices or payment details, call the
@@ -48,6 +53,11 @@ Run against a production build with a local copy of the database. All 48 checks 
 - Every admin server action calls `requireAdmin()` before doing anything.
 
 ## Known limits
+
+- **Card photos from abandoned carts stay in storage.** The photo uploads when the
+  customer picks it, before checkout. Uploads are limited to 20 per hour per visitor.
+  Old unused files can be deleted from Supabase → Storage → `card-photos` at any time;
+  files used in orders are listed on each order page.
 
 - **Signing up reveals whether an email is registered** when email confirmation is
   off. Keep "Confirm email" on in Supabase (see DEPLOYMENT.md).

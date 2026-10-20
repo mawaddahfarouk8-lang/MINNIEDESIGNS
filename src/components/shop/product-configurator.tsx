@@ -3,12 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { Check, Minus, Plus } from "lucide-react";
+import { Check, ImagePlus, Minus, Plus } from "lucide-react";
+import { uploadCardPhoto } from "@/app/(shop)/shop/actions";
 import { useCart } from "@/components/cart/cart-provider";
-import { Button } from "@/components/ui";
+import { Button, buttonClass } from "@/components/ui";
 import { money } from "@/lib/format";
 import { defaultOptions, unitPrice } from "@/lib/pricing";
-import { CARD_COLORS, type Personalization, type Product } from "@/lib/types";
+import { resizeImage, thumbnailDataUrl } from "@/lib/resize-image";
+import { CARD_COLORS, type CardLayout, type Personalization, type Product } from "@/lib/types";
 
 export function ProductGallery({ product }: { product: Product }) {
   const [index, setIndex] = useState(0);
@@ -50,20 +52,164 @@ export function ProductGallery({ product }: { product: Product }) {
   );
 }
 
-function CardPreview({ p, color }: { p: Personalization; color: (typeof CARD_COLORS)[number] }) {
+function CardPreview({
+  p,
+  color,
+  photoUrl,
+  layout,
+}: {
+  p: Personalization;
+  color: (typeof CARD_COLORS)[number];
+  photoUrl?: string;
+  layout: CardLayout;
+}) {
+  const onPhoto = Boolean(photoUrl) && layout === "background";
   return (
     <div
-      className="relative mx-auto flex aspect-[7/4] w-full max-w-sm flex-col justify-between rounded-lg p-6 shadow-soft transition-colors"
-      style={{ background: color.bg, color: color.fg }}
-      aria-label="Business card preview"
+      className="relative mx-auto aspect-[7/4] w-full max-w-sm overflow-hidden rounded-lg shadow-soft transition-colors"
+      style={{ background: color.bg, color: onPhoto ? "#fffcfb" : color.fg }}
+      role="img"
+      aria-label={`Business card preview for ${p.name || "your name"}`}
     >
-      <span className="text-[0.65rem] tracking-[0.3em] opacity-70">minnie design</span>
-      <div>
-        <p className="font-script text-4xl leading-tight">{p.name || "Your Name"}</p>
-        <p className="mt-1 text-sm tracking-wide opacity-80">{p.title || "Your title"}</p>
+      {onPhoto && (
+        <>
+          {/* Local preview of the customer's own photo (blob URL). */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={photoUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
+        </>
+      )}
+      <div className="relative flex h-full flex-col justify-between p-6">
+        <span className="text-[0.65rem] tracking-[0.3em] opacity-70">minnie design</span>
+        <div className="flex items-end justify-between gap-4">
+          <div className="min-w-0">
+            <p className="truncate font-script text-4xl leading-tight">{p.name || "Your Name"}</p>
+            <p className="mt-1 truncate text-sm tracking-wide opacity-80">{p.title || "Your title"}</p>
+          </div>
+          {photoUrl && layout === "portrait" && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={photoUrl}
+              alt=""
+              className="h-20 w-20 shrink-0 rounded-full object-cover"
+              style={{ boxShadow: `0 0 0 2px ${color.fg}` }}
+            />
+          )}
+        </div>
+        <p className="text-sm tabular-nums opacity-80">{p.phone || "010 0000 0000"}</p>
       </div>
-      <p className="text-sm tabular-nums opacity-80">{p.phone || "010 0000 0000"}</p>
     </div>
+  );
+}
+
+type CardPhoto = { path: string; url: string; preview?: string };
+
+function CardPhotoPicker({
+  photo,
+  layout,
+  onPhoto,
+  onLayout,
+  onBusy,
+}: {
+  photo: CardPhoto | null;
+  layout: CardLayout;
+  onPhoto: (photo: CardPhoto | null) => void;
+  onLayout: (layout: CardLayout) => void;
+  onBusy: (busy: boolean) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function choose(file: File | undefined) {
+    if (!file) return;
+    setError("");
+    setUploading(true);
+    onBusy(true);
+    try {
+      // Large enough to print sharply, small enough for a quick upload.
+      const resized = await resizeImage(file, 2400, 0.9);
+      const fd = new FormData();
+      fd.set("photo", resized);
+      const [res, preview] = await Promise.all([uploadCardPhoto(fd), thumbnailDataUrl(resized)]);
+      if (!res.path) {
+        setError(res.error ?? "Upload failed. Try another photo.");
+        return;
+      }
+      if (photo) URL.revokeObjectURL(photo.url);
+      onPhoto({ path: res.path, url: URL.createObjectURL(resized), preview });
+    } catch {
+      setError("Upload failed. Check your connection and try again.");
+    } finally {
+      setUploading(false);
+      onBusy(false);
+    }
+  }
+
+  return (
+    <fieldset className="space-y-3">
+      <legend className="mb-2 text-sm font-medium">
+        Your photo <span className="font-normal text-ink-soft">(optional)</span>
+      </legend>
+      <div className="flex flex-wrap items-center gap-3">
+        <label
+          className={`${buttonClass("secondary", "sm")} cursor-pointer has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-rose`}
+        >
+          <ImagePlus className="h-4 w-4" />
+          {uploading ? "Uploading…" : photo ? "Change photo" : "Add a photo or logo"}
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="sr-only"
+            disabled={uploading}
+            onChange={(e) => {
+              choose(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+        </label>
+        {photo && !uploading && (
+          <button
+            type="button"
+            onClick={() => {
+              URL.revokeObjectURL(photo.url);
+              onPhoto(null);
+            }}
+            className="text-sm text-ink-soft underline-offset-4 hover:text-danger hover:underline"
+          >
+            Remove photo
+          </button>
+        )}
+      </div>
+      {error && (
+        <p role="alert" className="text-sm text-danger">
+          {error}
+        </p>
+      )}
+      {photo && (
+        <div role="radiogroup" aria-label="Photo placement" className="flex flex-wrap gap-2">
+          {(
+            [
+              ["portrait", "Round portrait"],
+              ["background", "Full background"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={layout === value}
+              onClick={() => onLayout(value)}
+              className={`rounded-full border px-4 py-1.5 text-sm transition-colors ${
+                layout === value ? "border-ink bg-ink text-paper" : "border-line bg-card hover:border-rose"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      <p className="text-xs text-ink-soft">JPG, PNG or WEBP. We use it only to print your card.</p>
+    </fieldset>
   );
 }
 
@@ -75,6 +221,9 @@ export function ProductConfigurator({ product }: { product: Product }) {
   const [personal, setPersonal] = useState<Personalization>({});
   const [nameError, setNameError] = useState("");
   const [added, setAdded] = useState(false);
+  const [photo, setPhoto] = useState<CardPhoto | null>(null);
+  const [layout, setLayout] = useState<CardLayout>("portrait");
+  const [photoBusy, setPhotoBusy] = useState(false);
 
   const unit = unitPrice(product, options);
   const color = CARD_COLORS[colorIndex];
@@ -95,6 +244,7 @@ export function ProductConfigurator({ product }: { product: Product }) {
             title: personal.title?.trim() || undefined,
             phone: personal.phone?.trim() || undefined,
             color: color.name,
+            ...(photo && { photo: photo.path, layout, photoPreview: photo.preview }),
           }
         : undefined,
     });
@@ -146,7 +296,20 @@ export function ProductConfigurator({ product }: { product: Product }) {
           <h2 id="personalize-heading" className="text-2xl">
             Your card
           </h2>
-          <CardPreview p={personal} color={color} />
+          <CardPreview p={personal} color={color} photoUrl={photo?.url} layout={layout} />
+          <CardPhotoPicker
+            photo={photo}
+            layout={layout}
+            onPhoto={(p) => {
+              setPhoto(p);
+              setAdded(false);
+            }}
+            onLayout={(l) => {
+              setLayout(l);
+              setAdded(false);
+            }}
+            onBusy={setPhotoBusy}
+          />
           <fieldset>
             <legend className="mb-2 text-sm font-medium">Card color</legend>
             <div className="flex gap-3">
@@ -158,7 +321,7 @@ export function ProductConfigurator({ product }: { product: Product }) {
                   aria-pressed={i === colorIndex}
                   aria-label={c.name}
                   title={c.name}
-                  className={`h-9 w-9 rounded-full border border-ink/15 ring-offset-2 ring-offset-card transition ${
+                  className={`h-9 w-9 rounded-full border border-ink/35 ring-offset-2 ring-offset-card transition ${
                     i === colorIndex ? "ring-2 ring-ink" : ""
                   }`}
                   style={{ background: c.bg }}
@@ -251,8 +414,8 @@ export function ProductConfigurator({ product }: { product: Product }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="button" onClick={addToCart} className="min-w-44">
-          Add to cart
+        <Button type="button" onClick={addToCart} className="min-w-44" disabled={photoBusy}>
+          {photoBusy ? "Uploading photo…" : "Add to cart"}
         </Button>
         <p role="status" className="flex items-center gap-2 text-sm">
           {added && (

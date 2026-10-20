@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Mail, MessageCircle, Phone } from "lucide-react";
+import { Download, Mail, MessageCircle, Phone } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { formatDateTime, money, whatsappLink } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
@@ -48,6 +48,24 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
     proofUrl = data?.signedUrl ?? null;
   }
 
+  // Customer card photos: one short-lived link to view, one to download for printing.
+  const photoPaths = order.order_items
+    .map((i) => (i.personalization as Personalization | null)?.photo)
+    .filter((p): p is string => Boolean(p));
+  const photoLinks = new Map<string, { view: string; download: string }>();
+  await Promise.all(
+    photoPaths.map(async (path) => {
+      const bucket = supabase.storage.from("card-photos");
+      const [view, download] = await Promise.all([
+        bucket.createSignedUrl(path, 600),
+        bucket.createSignedUrl(path, 600, { download: `${order.order_number}-photo.${path.split(".").pop()}` }),
+      ]);
+      if (view.data && download.data) {
+        photoLinks.set(path, { view: view.data.signedUrl, download: download.data.signedUrl });
+      }
+    }),
+  );
+
   const events = [...order.order_events].sort((a, b) => a.created_at.localeCompare(b.created_at));
   const firstName = order.customer_name.split(" ")[0];
 
@@ -89,7 +107,24 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
                           {p.title && (<><dt className="text-ink-soft">Title</dt><dd>{p.title}</dd></>)}
                           {p.phone && (<><dt className="text-ink-soft">Phone</dt><dd>{p.phone}</dd></>)}
                           {p.color && (<><dt className="text-ink-soft">Color</dt><dd>{p.color}</dd></>)}
+                          {p.photo && (<><dt className="text-ink-soft">Photo</dt><dd>{p.layout === "background" ? "Full background" : "Round portrait"}</dd></>)}
                         </dl>
+                      )}
+                      {p.photo && photoLinks.get(p.photo) && (
+                        <div className="mt-2 flex items-center gap-3">
+                          <a href={photoLinks.get(p.photo)!.view} target="_blank" rel="noopener noreferrer">
+                            {/* Signed, short-lived URL from a private bucket. */}
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={photoLinks.get(p.photo)!.view}
+                              alt={`Photo from ${firstName} for the card`}
+                              className="h-20 w-20 rounded-lg border border-line object-cover"
+                            />
+                          </a>
+                          <a href={photoLinks.get(p.photo)!.download} className={buttonClass("secondary", "sm")}>
+                            <Download className="h-4 w-4" /> Download for printing
+                          </a>
+                        </div>
                       )}
                     </div>
                     <div className="text-right tabular-nums">

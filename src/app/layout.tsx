@@ -38,19 +38,19 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8ecea" },
-    { media: "(prefers-color-scheme: dark)", color: "#1e1419" },
-  ],
+  themeColor: "#1e1419",
+  colorScheme: "dark light",
 };
 
-// Applies the saved or system theme before first paint to avoid a flash.
-const themeScript = `(function(){try{var t=localStorage.getItem("theme");if(t!=="light"&&t!=="dark"){t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.dataset.theme=t}catch(e){}})()`;
+// Dark is the default. A visitor who switched to light keeps it; the script
+// runs before first paint so there's no flash.
+const themeScript = `(function(){try{if(localStorage.getItem("theme")==="light")document.documentElement.dataset.theme="light"}catch(e){}})()`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
+      data-theme="dark"
       suppressHydrationWarning
       className={`${bodoni.variable} ${figtree.variable} ${pinyon.variable}`}
     >

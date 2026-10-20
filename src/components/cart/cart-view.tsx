@@ -17,12 +17,25 @@ export function LineDetails({ line }: { line: CartLine }) {
     ...(line.personalization?.phone ? [`Phone: ${line.personalization.phone}`] : []),
     ...(line.personalization?.color ? [`Color: ${line.personalization.color}`] : []),
   ];
+  const p = line.personalization;
   return (
-    <ul className="mt-1 space-y-0.5 text-sm text-ink-soft">
-      {details.map((d) => (
-        <li key={d}>{d}</li>
-      ))}
-    </ul>
+    <>
+      <ul className="mt-1 space-y-0.5 text-sm text-ink-soft">
+        {details.map((d) => (
+          <li key={d}>{d}</li>
+        ))}
+      </ul>
+      {p?.photo && (
+        <div className="mt-2 flex items-center gap-2 text-sm text-ink-soft">
+          {p.photoPreview && (
+            // Thumbnail stored in the cart as a data URL.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={p.photoPreview} alt="Your photo" className="h-9 w-9 rounded-full object-cover" />
+          )}
+          Your photo, {p.layout === "background" ? "full background" : "round portrait"}
+        </div>
+      )}
+    </>
   );
 }
 

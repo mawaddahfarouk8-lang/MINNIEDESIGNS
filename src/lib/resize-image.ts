@@ -24,3 +24,20 @@ export async function resizeImage(file: File, maxSide = 1800, quality = 0.85): P
     return file;
   }
 }
+
+// Tiny JPEG data URL (about 5-15 KB) so the cart can show the photo after a
+// reload without keeping the full image in browser storage.
+export async function thumbnailDataUrl(file: File, size = 160): Promise<string | undefined> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = size / Math.max(bitmap.width, bitmap.height);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    return canvas.toDataURL("image/jpeg", 0.7);
+  } catch {
+    return undefined;
+  }
+}

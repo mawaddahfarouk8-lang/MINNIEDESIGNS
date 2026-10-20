@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from "react";
-import type { CartItem, Personalization } from "@/lib/types";
+import { withoutPreview, type CartItem, type Personalization } from "@/lib/types";
 
 const STORAGE_KEY = "minnie_cart_v1";
 const CHANGE_EVENT = "minnie-cart-change";
@@ -19,7 +19,7 @@ type CartContextValue = {
 const CartContext = createContext<CartContextValue | null>(null);
 
 function itemKey(productId: number, options: Record<string, string>, p?: Personalization) {
-  return `${productId}:${JSON.stringify(options)}:${JSON.stringify(p ?? {})}`;
+  return `${productId}:${JSON.stringify(options)}:${JSON.stringify(withoutPreview(p ?? {}))}`;
 }
 
 // Only keeps entries with the expected shape; anything else in storage is dropped.

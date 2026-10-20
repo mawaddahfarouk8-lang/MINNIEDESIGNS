@@ -12,6 +12,7 @@ export const LIMITS = {
   placeOrder: { max: 10, windowSeconds: 60 * 60 },
   trackOrder: { max: 20, windowSeconds: 15 * 60 },
   customRequest: { max: 5, windowSeconds: 60 * 60 },
+  cardPhoto: { max: 20, windowSeconds: 60 * 60 },
 } satisfies Record<string, Rule>;
 
 // On Vercel, x-real-ip and x-forwarded-for are set by the edge network and

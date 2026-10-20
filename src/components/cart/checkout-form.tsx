@@ -11,7 +11,13 @@ import { Button, ButtonLink, Field } from "@/components/ui";
 import { money } from "@/lib/format";
 import { cartLines } from "@/lib/pricing";
 import { resizeImage } from "@/lib/resize-image";
-import { PAYMENT_METHOD_LABEL, type PaymentMethod, type Product, type StoreSettings } from "@/lib/types";
+import {
+  PAYMENT_METHOD_LABEL,
+  withoutPreview,
+  type PaymentMethod,
+  type Product,
+  type StoreSettings,
+} from "@/lib/types";
 
 type Defaults = { name: string; phone: string; email: string };
 
@@ -106,7 +112,7 @@ export function CheckoutForm({
           product_id: l.productId,
           quantity: l.quantity,
           options: l.options,
-          ...(l.personalization ? { personalization: l.personalization } : {}),
+          ...(l.personalization ? { personalization: withoutPreview(l.personalization) } : {}),
         })),
       }),
     );
