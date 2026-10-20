@@ -1,0 +1,186 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Minnie Design tokens: rosewater paper, plum ink, dusty rose. */
+:root {
+  --paper: #f8ecea;
+  --card: #fffcfb;
+  --ink: #3b2232;
+  --ink-soft: #6e5563;
+  --rose: #b4587a;
+  --rose-deep: #93405f;
+  --petal: #edcbd3;
+  --petal-soft: #f6e0e4;
+  --sage: #5f7050;
+  --sage-soft: #e3e9da;
+  --amber: #8a5a12;
+  --amber-soft: #f7e7c9;
+  --danger: #a3262f;
+  --danger-soft: #f8dcdc;
+  --line: #e6cfd3;
+  --shadow: 0 1px 2px rgb(59 34 50 / 0.06), 0 8px 24px rgb(59 34 50 / 0.07);
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --paper: #1e1419;
+  --card: #2a1d24;
+  --ink: #f6e6ea;
+  --ink-soft: #c7aeba;
+  --rose: #e08aa8;
+  --rose-deep: #f0a9c1;
+  --petal: #4a2f3c;
+  --petal-soft: #3a2630;
+  --sage: #a9ba95;
+  --sage-soft: #2f3a28;
+  --amber: #e9b766;
+  --amber-soft: #3d2f18;
+  --danger: #f19aa0;
+  --danger-soft: #4a1f24;
+  --line: #4a3440;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.3);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-rose: var(--rose);
+  --color-rose-deep: var(--rose-deep);
+  --color-petal: var(--petal);
+  --color-petal-soft: var(--petal-soft);
+  --color-sage: var(--sage);
+  --color-sage-soft: var(--sage-soft);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-line: var(--line);
+  --shadow-soft: var(--shadow);
+  --font-display: var(--font-bodoni), "Bodoni 72", Didot, serif;
+  --font-sans: var(--font-figtree), system-ui, sans-serif;
+  --font-script: var(--font-pinyon), cursive;
+}
+
+@layer base {
+html {
+  background: var(--paper);
+  color: var(--ink);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.6;
+  min-height: 100dvh;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+:focus-visible {
+  outline: 2px solid var(--rose);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: var(--petal);
+  color: var(--ink);
+}
+}
+
+@layer components {
+/* Form controls share one look across shop and admin. */
+.field-input {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 10px;
+  padding: 0.7rem 0.85rem;
+  font-size: 1rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.field-input::placeholder {
+  color: var(--ink-soft);
+  opacity: 0.7;
+}
+.field-input:focus {
+  outline: none;
+  border-color: var(--rose);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--rose) 22%, transparent);
+}
+.field-input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+select.field-input {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%),
+    linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 55%, calc(100% - 13px) 55%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 2.2rem;
+}
+}
+
+/* The fanned print stack: the brand's signature product treatment. */
+.print-stack {
+  position: relative;
+  aspect-ratio: 5 / 4;
+}
+.print-stack > * {
+  position: absolute;
+  inset: 8% 16%;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgb(59 34 50 / 0.12), 0 14px 30px rgb(59 34 50 / 0.18);
+  background: var(--card);
+  border: 5px solid var(--card);
+  transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.print-stack > :nth-child(1) {
+  transform: rotate(-7deg) translateX(-6%);
+}
+.print-stack > :nth-child(2) {
+  transform: rotate(5deg) translateX(5%);
+}
+.print-stack > :nth-child(3) {
+  transform: rotate(-1deg);
+}
+.group:hover .print-stack > :nth-child(1),
+.group:focus-visible .print-stack > :nth-child(1) {
+  transform: rotate(-11deg) translateX(-14%);
+}
+.group:hover .print-stack > :nth-child(2),
+.group:focus-visible .print-stack > :nth-child(2) {
+  transform: rotate(9deg) translateX(13%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
