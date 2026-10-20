@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Custom design — Minnie Design</title><meta name="description" content="Tell us what you need and we will design it.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="wrap">
+  <div class="page-head"><h1>Request a custom design</h1><p>Fill in the details and we'll get back to you with a quote.</p></div>
+  <form class="form-card" id="form" novalidate>
+    <div class="field"><label for="type">What do you need? <em>*</em></label><select id="type" data-rule="required"><option value="">Choose a category</option></select></div>
+    <div class="grid2">
+      <div class="field"><label for="name">Your name <em>*</em></label><input id="name" data-rule="required min3" autocomplete="name"></div>
+      <div class="field"><label for="phone">Mobile number <em>*</em></label><input id="phone" type="tel" inputmode="numeric" placeholder="01012345678" data-rule="required phone" autocomplete="tel"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="email">Email</label><input id="email" type="email" data-rule="email" autocomplete="email"></div>
+      <div class="field"><label for="qty">Quantity <em>*</em></label><input id="qty" type="number" min="1" value="1" data-rule="required"></div>
+    </div>
+    <div class="field"><label for="text">Text to include <em>*</em></label><textarea id="text" rows="3" placeholder="Names, titles, phone numbers, slogans…" data-rule="required min3"></textarea></div>
+    <div class="field"><label for="colors">Preferred colors and style</label><input id="colors" placeholder="Soft pink and gold, minimal"></div>
+    <div class="grid2">
+      <div class="field"><label for="date">Needed by</label><input id="date" type="date" data-rule="future"></div>
+      <div class="field"><label for="file">Logo or reference image</label><input id="file" type="file" accept="image/*" data-rule="image"><span class="hint">Image, up to 5 MB.</span></div>
+    </div>
+    <div class="field"><label for="notes">Anything else?</label><textarea id="notes" rows="3"></textarea></div>
+    <button class="btn btn-solid" type="submit">Send request</button>
+  </form>
+  <div class="form-card success" id="done" hidden><i class="fa-solid fa-circle-check"></i><h2>Request received</h2><p id="done-msg"></p><a class="btn btn-solid" href="shop.html">Back to shop</a></div>
+</div>
+<script src="products.js"></script><script src="app.js"></script>
+<script>
+const form = document.getElementById("form"), type = document.getElementById("type");
+CATEGORIES.forEach(c => type.add(new Option(c.name, c.id)));
+const t = new URLSearchParams(location.search).get("type"); if (CATEGORIES.some(c => c.id === t)) type.value = t;
+document.getElementById("date").min = new Date().toISOString().slice(0, 10);
+liveValidate(form);
+form.onsubmit = e => {
+  e.preventDefault();
+  if (!validateForm(form)) return;
+  const v = id => document.getElementById(id).value.trim();
+  const list = read("custom_requests", []);
+  const ref = "C-" + String(list.length + 1).padStart(4, "0");
+  // مؤقتاً في المتصفح. هيتحفظ في جدول custom_requests لما نعمل PHP.
+  list.push({ ref, category: v("type"), name: v("name"), phone: v("phone"), email: v("email"), qty: v("qty"), text: v("text"), colors: v("colors"), date: v("date"), file: document.getElementById("file").files[0]?.name || "", notes: v("notes"), status: "new", created: new Date().toISOString() });
+  write("custom_requests", list);
+  form.hidden = true; document.getElementById("done").hidden = false;
+  document.getElementById("done-msg").textContent = "Your request number is " + ref + ". We will contact you on " + v("phone") + " soon.";
+  scrollTo({ top: 0, behavior: "smooth" });
+};</script></body></html>

@@ -1,0 +1,369 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout — Minnie Design</title>
+  <meta name="description" content="Complete your order.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+<div class="wrap">
+
+  <div class="page-head">
+    <h1>Checkout</h1>
+  </div>
+
+  <div class="cart-layout" id="layout">
+
+    <form class="form-card" id="form" novalidate style="margin:0;max-width:none">
+
+      <div class="grid2">
+        <div class="field">
+          <label for="name">Full name <em>*</em></label>
+          <input id="name" data-rule="required min3" autocomplete="name">
+        </div>
+
+        <div class="field">
+          <label for="phone">Mobile number <em>*</em></label>
+          <input id="phone" type="tel" inputmode="numeric"
+                 placeholder="01012345678"
+                 data-rule="required phone" autocomplete="tel">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" type="email" data-rule="email" autocomplete="email">
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label for="gov">Delivery area <em>*</em></label>
+          <select id="gov" data-rule="required">
+            <option value="">Choose</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="city">District / neighborhood <em>*</em></label>
+          <input id="city" data-rule="required">
+        </div>
+      </div>
+
+      <p class="hint" style="margin-bottom:16px">
+        We deliver inside Port Said and Port Fouad only.
+      </p>
+
+      <div class="field">
+        <label for="address">Street address <em>*</em></label>
+        <textarea id="address" rows="2"
+                  data-rule="required min3"
+                  autocomplete="street-address"></textarea>
+      </div>
+
+      <div class="field">
+        <label>Payment method</label>
+        <div class="radios" id="pays"></div>
+        <p class="hint" id="payinfo"></p>
+      </div>
+
+      <div class="field" id="proof-field" hidden>
+        <label for="proof">Transfer screenshot <em>*</em></label>
+        <input id="proof" type="file" accept="image/*">
+        <span class="hint">
+          Image, up to 5 MB. We confirm your order once we see the payment.
+        </span>
+      </div>
+
+      <div class="field">
+        <label for="notes">Order notes</label>
+        <textarea id="notes" rows="2"></textarea>
+      </div>
+
+      <button class="btn btn-solid" type="submit">Place order</button>
+    </form>
+
+    <aside class="summary" id="summary"></aside>
+  </div>
+
+  <div class="form-card success" id="done" hidden>
+    <i class="fa-solid fa-circle-check"></i>
+    <h2>Order placed</h2>
+    <p id="done-msg"></p>
+    <a class="btn btn-solid" href="shop.html">Keep shopping</a>
+  </div>
+
+</div>
+
+<script src="products.js"></script>
+<script src="app.js"></script>
+
+<script>
+const form = document.getElementById("form");
+const gov = document.getElementById("gov");
+const summary = document.getElementById("summary");
+
+Object.keys(SHIPPING).forEach(area => {
+  gov.add(new Option(area, area));
+});
+
+function ship() {
+  return gov.value ? SHIPPING[gov.value] : 0;
+}
+
+function draw() {
+  const lines = Cart.lines();
+
+  if (!lines.length && !form.hidden) {
+    document.getElementById("layout").innerHTML = `
+      <div class="empty" style="grid-column:1/-1">
+        <h2>Your cart is empty</h2>
+        <p>Add a design before checking out.</p>
+        <a class="btn btn-solid" href="shop.html">Browse the shop</a>
+      </div>`;
+    return;
+  }
+
+  summary.innerHTML = `
+    <h2>Order summary</h2>
+    ${lines.map(line => `
+      <div class="row">
+        <span>
+          ${line.name} × ${line.qty}<br>
+          <small>${optText(line.opts || {})}</small>
+        </span>
+        <span>${money(line.price * line.qty)}</span>
+      </div>
+    `).join("")}
+
+    <div class="row">
+      <span>Shipping</span>
+      <span>${gov.value ? money(ship()) : "Choose delivery area"}</span>
+    </div>
+
+    <div class="row total">
+      <span>Total</span>
+      <span>${money(Cart.subtotal() + ship())}</span>
+    </div>
+
+    <a href="cart.html" class="hint">Edit cart</a>
+  `;
+}
+
+const pays = document.getElementById("pays");
+const payinfo = document.getElementById("payinfo");
+const proofF = document.getElementById("proof-field");
+const proof = document.getElementById("proof");
+
+pays.innerHTML = PAYMENT.map((method, index) => `
+  <label>
+    <input
+      type="radio"
+      name="pay"
+      value="${method.id}"
+      ${index === 0 ? "checked" : ""}
+    >
+    <span>${method.label}</span>
+  </label>
+`).join("");
+
+function pay() {
+  const method = PAYMENT.find(item => item.id === form.pay.value);
+
+  if (!method) return;
+
+  payinfo.textContent = method.info;
+  proofF.hidden = !method.proof;
+
+  if (method.proof) {
+    proof.dataset.rule = "imgreq image";
+  } else {
+    delete proof.dataset.rule;
+    proof.classList.remove("invalid");
+
+    const error = proofF.querySelector(".err");
+    if (error) error.textContent = "";
+  }
+}
+
+pays.addEventListener("change", pay);
+pay();
+
+gov.addEventListener("change", draw);
+
+liveValidate(form);
+draw();
+
+
+// Prepare product options before sending the order.
+function prepareOrderItems(lines) {
+  return lines.map(item => {
+    const product = PRODUCTS.find(
+      product => Number(product.id) === Number(item.id)
+    );
+
+    const options = { ...(item.opts || {}) };
+
+    if (product) {
+      (product.options || []).forEach(option => {
+        const selectedValue = options[option.key];
+
+        const validSelection = option.choices.some(
+          choice => choice.name === selectedValue
+        );
+
+        // Fill in only missing or invalid selections.
+        if (!validSelection && option.choices.length > 0) {
+          options[option.key] = option.choices[0].name;
+        }
+      });
+    }
+
+    return {
+      id: Number(item.id),
+      qty: Number(item.qty),
+      options: options
+    };
+  });
+}
+
+
+form.onsubmit = async event => {
+  event.preventDefault();
+
+  if (!validateForm(form)) return;
+
+  const value = id =>
+    document.getElementById(id).value.trim();
+
+  const lines = Cart.lines();
+
+  if (!lines.length) {
+    alert("Your cart is empty.");
+    return;
+  }
+
+  const selectedPayment = PAYMENT.find(
+    method => method.id === form.pay.value
+  );
+
+  if (!selectedPayment) {
+    alert("Please select a payment method.");
+    return;
+  }
+
+  if (selectedPayment.proof && !proof.files.length) {
+    alert("Please upload your payment screenshot.");
+    proof.focus();
+    return;
+  }
+
+  const paymentMap = {
+    "cash": "cash_on_delivery",
+    "instapay": "instapay",
+    "vodafone": "vodafone_cash",
+    "cash_on_delivery": "cash_on_delivery",
+    "Cash on delivery": "cash_on_delivery",
+    "InstaPay": "instapay",
+    "Vodafone Cash": "vodafone_cash"
+  };
+
+  const paymentValue = paymentMap[selectedPayment.id];
+
+  if (!paymentValue) {
+    alert("Payment method configuration needs checking.");
+    return;
+  }
+
+  const button = form.querySelector('[type="submit"]');
+
+  button.disabled = true;
+  button.textContent = "Placing order...";
+
+  try {
+    const formData = new FormData();
+
+    const orderItems = prepareOrderItems(lines);
+
+    // Diagnostic information in the browser console.
+    console.log("Prepared order items:", orderItems);
+
+    formData.append("order", JSON.stringify({
+      name: value("name"),
+      phone: value("phone"),
+      email: value("email"),
+      city: gov.value,
+      address: value("address"),
+      notes: [value("city"), value("notes")]
+        .filter(Boolean)
+        .join(" — "),
+      payment: paymentValue,
+      items: orderItems
+    }));
+
+    if (proof.files.length > 0) {
+      formData.append("proof", proof.files[0]);
+    }
+
+    const response = await fetch("place_order.php", {
+      method: "POST",
+      credentials: "same-origin",
+      body: formData
+    });
+
+    const responseText = await response.text();
+
+    let result;
+
+    try {
+      result = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error("Server returned non-JSON:", responseText);
+      throw new Error(
+        "The server returned an error. Check the PHP error log."
+      );
+    }
+
+    console.log("Place order status:", response.status);
+    console.log("Place order response:", result);
+
+    if (!response.ok || !result.success) {
+      throw new Error(
+        result.message || "Could not place your order."
+      );
+    }
+
+    // Clear the cart only after the server confirms success.
+    Cart.clear();
+
+    document.getElementById("layout").hidden = true;
+    document.getElementById("done").hidden = false;
+
+    document.getElementById("done-msg").textContent =
+      "Your order number is " + result.order_number +
+      ". We will call " + value("phone") + " to confirm it.";
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+
+  } catch (error) {
+    console.error("Order submission failed:", error);
+    alert(error.message || "Something went wrong. Please try again.");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Place order";
+  }
+};
+</script>
+</body>
+</html>

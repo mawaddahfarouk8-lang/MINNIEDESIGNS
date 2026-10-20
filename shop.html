@@ -1,0 +1,215 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Shop — Minnie Design</title>
+    <meta name="description" content="Browse all designs by category.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="wrap">
+        <div class="page-head">
+            <h1 id="title">Shop</h1>
+            <p>Choose a design to order, or ask for your own.</p>
+        </div>
+
+        <div class="toolbar">
+            <div class="chips" id="chips" role="group" aria-label="Categories"></div>
+
+            <input
+                class="search"
+                id="q"
+                type="search"
+                placeholder="Search designs"
+                aria-label="Search designs"
+            >
+        </div>
+
+        <div class="projects-container" id="grid"></div>
+
+        <div class="empty" id="empty" hidden>
+            <h2>No designs here yet</h2>
+            <p>We can make this one for you. Send us the details.</p>
+            <a class="btn btn-solid" id="empty-cta" href="custom.html">
+                Request a custom design
+            </a>
+        </div>
+
+        <p id="load-error" role="status" hidden>
+            We couldn't load the latest products. Showing available products instead.
+        </p>
+    </div>
+
+    <div style="height:80px"></div>
+
+    <script src="products.js"></script>
+    <script src="app.js"></script>
+
+    <script>
+    (() => {
+        let cat = new URLSearchParams(location.search).get("cat") || "all";
+
+        const chips = document.getElementById("chips");
+        const grid = document.getElementById("grid");
+        const q = document.getElementById("q");
+        const title = document.getElementById("title");
+        const empty = document.getElementById("empty");
+        const emptyCta = document.getElementById("empty-cta");
+        const loadError = document.getElementById("load-error");
+
+        // Keep the existing category IDs used by the website.
+        const categoryIdByName = {
+            "Business Card": "business-card",
+            "Magazine": "magazine",
+            "Notebook & Coloring Book": "notebook",
+            "Tableau": "tableau",
+            "Giveaways": "giveaways"
+        };
+
+        function renderChips() {
+            chips.innerHTML = [
+                { id: "all", name: "All" },
+                ...CATEGORIES
+            ].map(c => `
+                <button
+                    type="button"
+                    class="chip"
+                    data-c="${c.id}"
+                    aria-pressed="false"
+                >${c.name}</button>
+            `).join("");
+        }
+
+        function draw() {
+            const term = q.value.trim().toLowerCase();
+
+            const list = PRODUCTS.filter(p => {
+                const matchesCategory = cat === "all" || p.cat === cat;
+                const searchableText = `${p.name} ${p.desc}`.toLowerCase();
+
+                return matchesCategory && searchableText.includes(term);
+            });
+
+            chips.querySelectorAll(".chip").forEach(button => {
+                const selected = button.dataset.c === cat;
+                button.classList.toggle("on", selected);
+                button.setAttribute("aria-pressed", String(selected));
+            });
+
+            const selectedCategory = CATEGORIES.find(c => c.id === cat);
+
+            title.textContent = selectedCategory
+                ? selectedCategory.name
+                : "Shop";
+
+            grid.innerHTML = list.map(productCard).join("");
+            empty.hidden = list.length > 0;
+
+            emptyCta.href = "custom.html" +
+                (selectedCategory
+                    ? "?type=" + encodeURIComponent(selectedCategory.id)
+                    : "");
+
+            Cart.badge();
+        }
+
+        chips.addEventListener("click", event => {
+            const button = event.target.closest(".chip");
+            if (!button) return;
+
+            cat = button.dataset.c;
+
+            const url = cat === "all"
+                ? "shop.html"
+                : "shop.html?cat=" + encodeURIComponent(cat);
+
+            history.replaceState(null, "", url);
+            draw();
+        });
+
+        q.addEventListener("input", draw);
+
+        renderChips();
+
+        if (cat !== "all" && !CATEGORIES.some(c => c.id === cat)) {
+            cat = "all";
+        }
+
+        // Show the existing products first, then replace them with database data.
+        draw();
+
+        async function loadDatabaseProducts() {
+            try {
+                const response = await fetch("get_products.php", {
+                    cache: "no-store",
+                    credentials: "same-origin"
+                });
+
+                if (!response.ok) {
+                    throw new Error("Product request failed");
+                }
+
+                const result = await response.json();
+
+                if (!result.success || !Array.isArray(result.products)) {
+                    throw new Error("Invalid product response");
+                }
+
+                const databaseProducts = result.products.map(product => {
+                    const categoryId =
+                        categoryIdByName[product.category_name];
+
+                    if (!categoryId) {
+                        return null;
+                    }
+
+                    return {
+                        ...product,
+                        cat: categoryId,
+                        unit: product.unit || "per design",
+                        personalize: Boolean(product.personalize),
+                        options: Array.isArray(product.options)
+                            ? product.options
+                            : [],
+                        images: (() => {
+    const oldProduct = PRODUCTS.find(
+        p => p.cat === categoryId &&
+             p.name === product.name
+    );
+
+    if (oldProduct && oldProduct.images.length > 1) {
+        return oldProduct.images;
+    }
+
+    return Array.isArray(product.images)
+        ? product.images
+        : [];
+})()
+                    };
+                }).filter(Boolean);
+
+                PRODUCTS = databaseProducts;
+                draw();
+
+            } catch (error) {
+                console.error("Could not load database products:", error);
+                loadError.hidden = false;
+            }
+        }
+
+        loadDatabaseProducts();
+    })();
+    </script>
+</body>
+</html>

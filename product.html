@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Product — Minnie Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="wrap" id="root"></div>
+<script src="products.js"></script><script src="app.js"></script>
+<script>
+const COLORS = [["Rose", "#EC6C9E", "#fff"], ["Blush", "#FFD6E3", "#5a2340"], ["Cream", "#FFF3E0", "#4a3b2a"], ["Charcoal", "#2d2d2d", "#fff"], ["Sage", "#B7C9A8", "#2c3b24"]];
+const p = PRODUCTS.find(x => x.id === +new URLSearchParams(location.search).get("id"));
+const root = document.getElementById("root");
+if (!p) {
+  root.innerHTML = `<div class="page-head"><h1>Product not found</h1></div><div class="empty"><p>This design isn't available.</p><a class="btn btn-solid" href="shop.html">Back to shop</a></div><div style="height:80px"></div>`;
+} else {
+  document.title = p.name + " — Minnie Design";
+  const cat = CATEGORIES.find(c => c.id === p.cat), isCard = p.cat === "business-card";
+  const sel = defaultOpts(p); let qty = 1, color = COLORS[0], shown = 0;
+  root.innerHTML = `<a class="back" href="shop.html?cat=${p.cat}">← Back to ${esc(cat.name)}</a>
+  <div class="pd">
+    <div><img class="pd-main" id="main" src="${p.images[0]}" alt="${esc(p.name)}">
+      <div class="thumbs">${p.images.map((s, i) => `<button type="button" data-i="${i}" class="${i ? "" : "on"}" aria-label="Photo ${i + 1}"><img src="${s}" alt=""></button>`).join("")}</div></div>
+    <div class="pd-info">
+      <span class="tag">${esc(cat.name)}</span><h1>${esc(p.name)}</h1><p>${esc(p.desc)}</p>
+      ${(p.options || []).map(o => `<div class="opt"><h3>${o.key}</h3><div class="chips" data-o="${o.key}">${o.choices.map((c, i) => `<button type="button" class="chip ${i ? "" : "on"}" data-v="${c.name}">${c.name}${c.add ? ` (+${c.add})` : ""}</button>`).join("")}</div></div>`).join("")}
+      ${isCard ? `<div class="personalize"><h2>Design your card</h2>
+        <div class="card-preview" id="prev"><span class="cp-brand">YOUR BRAND</span><div><div class="cp-name" id="pv-name">Your Name</div><div class="cp-title" id="pv-title">Your title</div></div><span class="cp-phone" id="pv-phone">01X XXXX XXXX</span></div>
+        <div class="swatches" id="sw">${COLORS.map((c, i) => `<button type="button" style="background:${c[1]}" data-c="${i}" class="${i ? "" : "on"}" aria-label="${c[0]}"></button>`).join("")}</div>
+        <div class="field"><label for="in-name">Name on card <em>*</em></label><input id="in-name" maxlength="30" data-rule="required min3"></div>
+        <div class="grid2"><div class="field"><label for="in-title">Title</label><input id="in-title" maxlength="35"></div>
+        <div class="field"><label for="in-phone">Phone on card</label><input id="in-phone" maxlength="20"></div></div></div>` : ""}
+      <div class="pd-price"><span id="total"></span> <small>${p.unit}</small></div>
+      <div class="qty"><button type="button" id="minus" aria-label="Decrease quantity">−</button><span id="q">1</span><button type="button" id="plus" aria-label="Increase quantity">+</button></div>
+      <div class="pd-actions"><button class="btn btn-solid" type="button" id="add">Add to cart</button><a class="btn btn-outline" href="custom.html?type=${p.cat}">Need something different?</a></div>
+    </div></div>`;
+  const $ = id => document.getElementById(id);
+  const unit = () => p.price + optPrice(p, sel);
+  const total = () => $("total").textContent = money(unit() * qty);
+  total();
+  root.onclick = e => {
+    const t = e.target.closest(".thumbs button"), c = e.target.closest(".chip"), s = e.target.closest("#sw button");
+    if (t) { $("main").src = p.images[t.dataset.i]; root.querySelectorAll(".thumbs button").forEach(b => b.classList.toggle("on", b === t)); }
+    if (c) { sel[c.parentElement.dataset.o] = c.dataset.v; c.parentElement.querySelectorAll(".chip").forEach(b => b.classList.toggle("on", b === c)); total(); }
+    if (s) { color = COLORS[s.dataset.c]; $("sw").querySelectorAll("button").forEach(b => b.classList.toggle("on", b === s)); preview(); }
+  };
+  $("minus").onclick = () => { qty = Math.max(1, qty - 1); $("q").textContent = qty; total(); };
+  $("plus").onclick = () => { qty = Math.min(99, qty + 1); $("q").textContent = qty; total(); };
+  function preview() {
+    if (!isCard) return;
+    const pr = $("prev"); pr.style.background = color[1]; pr.style.color = color[2];
+    $("pv-name").textContent = $("in-name").value || "Your Name";
+    $("pv-title").textContent = $("in-title").value || "Your title";
+    $("pv-phone").textContent = $("in-phone").value || "01X XXXX XXXX";
+  }
+  if (isCard) { ["in-name", "in-title", "in-phone"].forEach(id => $(id).addEventListener("input", preview)); preview(); $("in-name").addEventListener("blur", e => validateField(e.target)); }
+  $("add").onclick = () => {
+    const opts = { ...sel };
+    if (isCard) {
+      if (!validateField($("in-name"))) { $("in-name").focus(); return; }
+      opts["Name on card"] = $("in-name").value.trim(); opts["Title"] = $("in-title").value.trim(); opts["Phone on card"] = $("in-phone").value.trim(); opts["Card color"] = color[0];
+    }
+    Cart.add(p.id, opts, qty); afterAdd();
+  };
+}
+</script></body></html>

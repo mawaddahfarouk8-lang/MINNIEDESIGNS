@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cart — Minnie Design</title><meta name="description" content="Review your selected designs.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="wrap">
+  <div class="page-head"><h1>Your cart</h1></div>
+  <div class="cart-layout" id="layout">
+    <div id="items"></div>
+    <aside class="summary" id="summary"></aside>
+  </div>
+</div>
+<script src="products.js"></script><script src="app.js"></script>
+<script>
+const items = document.getElementById("items"), summary = document.getElementById("summary"), layout = document.getElementById("layout");
+function draw() {
+  const lines = Cart.lines();
+  if (!lines.length) {
+    layout.style.gridTemplateColumns = "1fr"; summary.hidden = true;
+    items.innerHTML = `<div class="empty"><h2>Your cart is empty</h2><p>Pick a design and add it to your cart.</p><a class="btn btn-solid" href="shop.html">Browse the shop</a></div>`;
+    return;
+  }
+  layout.style.gridTemplateColumns = ""; summary.hidden = false;
+  items.innerHTML = lines.map((l, n) => `<div class="cart-item">
+    <img src="${l.images[0]}" alt="${l.name}">
+    <div class="info"><h3>${l.name}</h3><small>${money(l.price)} · ${l.unit}</small><br><small>${optText(l.opts)}</small>
+      <div class="qty"><button type="button" data-q="${n}" data-d="-1" aria-label="Decrease quantity">−</button><span>${l.qty}</span><button type="button" data-q="${n}" data-d="1" aria-label="Increase quantity">+</button></div>
+      <button class="remove-btn" type="button" data-r="${n}">Remove</button></div>
+    <div class="line-total">${money(l.price * l.qty)}</div></div>`).join("");
+  summary.innerHTML = `<h2>Order summary</h2>
+    <div class="row"><span>Subtotal</span><span>${money(Cart.subtotal())}</span></div>
+    <div class="row"><span>Shipping</span><span>Calculated at checkout</span></div>
+    <a class="btn btn-solid" href="checkout.html">Checkout</a>
+    <a class="btn btn-outline" href="shop.html">Continue shopping</a>
+    <button class="remove-btn" type="button" id="clear" style="width:100%;margin-top:14px">Clear cart</button>`;
+}
+document.addEventListener("click", e => {
+  const q = e.target.closest("[data-q]"), r = e.target.closest("[data-r]");
+  if (q) { const l = Cart.lines()[+q.dataset.q]; Cart.setQty(l.key, Math.min(99, l.qty + +q.dataset.d)); draw(); }
+  if (r) { Cart.setQty(Cart.lines()[+r.dataset.r].key, 0); draw(); }
+  if (e.target.id === "clear" && confirm("Remove everything from your cart?")) { Cart.clear(); draw(); }
+});
+draw();</script></body></html>
